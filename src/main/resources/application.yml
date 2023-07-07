@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/unionfly?useUnicode=true&characterEncoding=utf-8
+    username: root
+    password: root
+  thymeleaf:
+    cache: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      connect-timeout: 1000
+
+
+hsuweizte.app.jwtSecret: abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890
+hsuweizte.app.jwtExpirationMs: 86400000
