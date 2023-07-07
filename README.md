@@ -10,8 +10,9 @@
 
 
 > 思路：實作一個攔截器，當攔截到登入請求時時，先解析Authorization的JWT，若JWT為空，則放行登入
-> 進入到Controller時，產生一個JWT放到header裡的Authorization。
-> 
+> 進入到Controller時，在SERVER端產生一個JWT放到header裡的Authorization。當第二次登入時，Filter去解析header裡的
+> Authorization的JWT token，如果不一樣，驗證異常
+ 
 > 
 
 ```java
@@ -59,6 +60,59 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         }
 
         return null;
+    }
+}
+
+```
+
+```Java
+ @Component
+public class JwtUtils {
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
+    //綁定yaml
+    @Value("${hsuweizte.app.jwtSecret}")
+    private String jwtSecret;
+
+    @Value("${hsuweizte.app.jwtExpirationMs}")
+    private int jwtExpirationMs;
+
+    public String generateJwtToken(Authentication authentication) {
+
+        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
+
+        return Jwts.builder()
+                .setSubject((userPrincipal.getUsername()))
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                .signWith(key(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    private Key key() {
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+    }
+
+    public String getUserNameFromJwtToken(String token) {
+        return Jwts.parserBuilder().setSigningKey(key()).build()
+                .parseClaimsJws(token).getBody().getSubject();
+    }
+
+    //token去解析失敗時會丟出 exception
+    public boolean validateJwtToken(String authToken) {
+        try {
+            Jwts.parserBuilder().setSigningKey(key()).build().parse(authToken);
+            return true;
+        } catch (MalformedJwtException e) {
+            logger.error("Invalid JWT token: {}", e.getMessage());
+        } catch (ExpiredJwtException e) {
+            logger.error("JWT token is expired: {}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            logger.error("JWT token is unsupported: {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            logger.error("JWT claims string is empty: {}", e.getMessage());
+        }
+
+        return false;
     }
 }
 
